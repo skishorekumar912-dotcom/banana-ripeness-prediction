@@ -1,0 +1,16 @@
+﻿.venv/
+venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+audit-output-2026-10-21/
+Dataset (train + test images)/
+dataset/
+webapp/static/uploads/
+webapp/static/*.mp4
+.env
+.streamlit/secrets.toml
+
+**/Dataset (train + test images)/
+
+webapp/app.py.backup-*
