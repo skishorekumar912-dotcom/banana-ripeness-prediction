@@ -253,6 +253,21 @@ st.markdown(
         line-height: 1.7;
     }
 
+    .recommendation-card {
+        background: white;
+        border: 1px solid #dfe9dd;
+        border-radius: 16px;
+        padding: 18px 22px;
+        margin: 10px 0;
+    }
+
+    .recommendation-heading {
+        color: #215c36;
+        font-size: 16px;
+        font-weight: 800;
+        margin-bottom: 8px;
+    }
+
     .footer {
         text-align: center;
         color: #788779;
@@ -299,7 +314,8 @@ st.markdown(
         <p>
             Explore banana ripeness classification using a trained
             MobileNetV2 image model. Upload an image, provide storage
-            conditions, and view the model's predicted stage.
+            conditions, and view the model's predicted stage along
+            with practical storage recommendations.
         </p>
     </div>
     """,
@@ -312,7 +328,7 @@ st.markdown(
         <strong>How it works</strong><br>
         01. Upload a banana image &nbsp; → &nbsp;
         02. Enter temperature and humidity &nbsp; → &nbsp;
-        03. Run the prediction
+        03. Run the prediction and view recommendations
     </div>
     """,
     unsafe_allow_html=True,
@@ -453,6 +469,103 @@ def estimate_days(stage, temperature, humidity):
         factor *= 0.9
 
     return round(max(0.0, days * factor), 1)
+
+
+# --------------------------------------------------
+# SMART STORAGE RECOMMENDATIONS
+# General guidance based on the predicted stage
+# and user-entered storage conditions.
+# --------------------------------------------------
+def get_recommendations(stage, temperature, humidity):
+    recommendations = {
+        "stage0_unripe": [
+            (
+                "Ripening: Allow the banana to ripen at room "
+                "temperature if you want it to ripen sooner."
+            ),
+            (
+                "Storage: Keep it in a clean, ventilated place "
+                "away from direct sunlight and excessive heat."
+            ),
+            (
+                "Monitoring: Check the banana regularly for "
+                "changes in colour, texture, and smell."
+            ),
+        ],
+        "stage1_ripe": [
+            (
+                "Consumption: Prioritize consuming or processing "
+                "the banana while it is ripe."
+            ),
+            (
+                "Storage: Keep it away from direct sunlight and "
+                "excessive heat."
+            ),
+            (
+                "Monitoring: Inspect regularly for soft spots, "
+                "leakage, mold, or unusual odour."
+            ),
+        ],
+        "stage2_overripe": [
+            (
+                "Inspection: Carefully inspect for mold, leakage, "
+                "or unusual odour before handling."
+            ),
+            (
+                "Use: If the banana appears sound and shows no "
+                "signs of spoilage, it may be suitable for cooking "
+                "or baking."
+            ),
+            (
+                "Caution: Discard it if mold, unusual odour, "
+                "leakage, or other signs of spoilage are present."
+            ),
+        ],
+        "stage3_rotten": [
+            (
+                "Safety: Do not consume a banana classified as "
+                "rotten or showing signs of spoilage."
+            ),
+            (
+                "Disposal: Discard the fruit and clean any surfaces "
+                "contaminated by leaking material."
+            ),
+            (
+                "Important: Do not rely on the AI prediction alone "
+                "to determine whether food is safe to eat."
+            ),
+        ],
+    }
+
+    # Recommendations for the predicted stage
+    tips = list(recommendations[stage])
+
+    # Temperature-related suggestions
+    if stage != "stage3_rotten":
+        if temperature > 30:
+            tips.append(
+                "Temperature: The entered temperature is high. "
+                "Keep the fruit away from heat and direct sunlight."
+            )
+        elif temperature < 18:
+            tips.append(
+                "Temperature: Ripening may be slower in cooler "
+                "conditions. Continue inspecting the fruit regularly."
+            )
+
+        # Humidity-related suggestions
+        if humidity > 80:
+            tips.append(
+                "Humidity: High humidity can encourage surface "
+                "moisture. Maintain ventilation and avoid condensation."
+            )
+        elif humidity < 40:
+            tips.append(
+                "Humidity: The entered humidity is low. Check the "
+                "fruit for shrivelling or signs of moisture loss."
+            )
+
+    return tips
 
 
 # --------------------------------------------------
@@ -620,13 +733,23 @@ if run_prediction:
                 index = int(np.argmax(scores))
                 stage = CLASS_NAMES[index]
 
-                # Preserves the existing rule-based estimate.
+                # Existing rule-based estimate
                 days_left = estimate_days(
                     stage,
                     float(temperature),
                     float(humidity),
                 )
 
+                # New smart recommendations
+                recommendations = get_recommendations(
+                    stage,
+                    float(temperature),
+                    float(humidity),
+                )
+
+            # ------------------------------------------
+            # PREDICTION RESULTS
+            # ------------------------------------------
             st.markdown(
                 '<div class="section-title">Prediction results</div>',
                 unsafe_allow_html=True,
@@ -663,6 +786,44 @@ if run_prediction:
                     f"{days_left} days",
                 )
 
+            # ------------------------------------------
+            # NEW: SMART RECOMMENDATIONS
+            # ------------------------------------------
+            st.divider()
+
+            st.markdown(
+                '<div class="section-title">'
+                '04 · Smart Storage Recommendations</div>',
+                unsafe_allow_html=True,
+            )
+
+            st.markdown(
+                '<div class="section-description">'
+                'Suggestions based on the predicted stage and '
+                'the temperature and humidity you entered.'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+
+            st.markdown(
+                '<div class="recommendation-card">'
+                '<div class="recommendation-heading">'
+                'Recommended next steps</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+
+            for tip in recommendations:
+                st.markdown(f"- {tip}")
+
+            st.info(
+                "These are general handling suggestions, not "
+                "personalized or experimentally validated storage advice."
+            )
+
+            # ------------------------------------------
+            # INTERPRETATION AND SAFETY NOTE
+            # ------------------------------------------
             st.caption(
                 "Interpretation note: The model output score is not "
                 "necessarily a calibrated probability or a verified "
